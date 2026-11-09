@@ -97,7 +97,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:3px;border-rad
   background:radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--broth) 70%, #fff), var(--broth) 55%, color-mix(in srgb, var(--broth) 70%, #000));
   box-shadow:inset 0 6px 16px #0006;
 }
-.broth::after{content:"";position:absolute;inset:0;border-radius:50%;
+.broth::after{content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;z-index:0;
   background:radial-gradient(circle at 30% 70%, #fff3 0 4%, transparent 5%),radial-gradient(circle at 70% 40%, #fff3 0 3%, transparent 4%),radial-gradient(circle at 55% 80%, #fff2 0 2.5%, transparent 3.5%);
   animation:simmer 2.4s ease-in-out infinite alternate}
 @keyframes simmer{to{transform:scale(1.04) rotate(8deg)}}
@@ -109,7 +109,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:3px;border-rad
 .steam span:nth-child(3){left:66%;animation-delay:2.1s}
 @keyframes steam{0%{transform:translateY(20%) scale(.6);opacity:0}30%{opacity:1}100%{transform:translateY(-90%) scale(1.3);opacity:0}}
 
-.slot{position:absolute;width:38%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;border-radius:14px;padding:4px}
+.slot{position:absolute;z-index:2;width:38%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;border-radius:14px;padding:4px}
 .slot.empty{outline:2px dashed #ffffff40;outline-offset:-4px;aspect-ratio:1.5/1;border-radius:50%}
 .slot svg{width:100%;display:block;filter:drop-shadow(0 3px 2px #0005)}
 .slot:not(.empty) svg{animation:swish 1.3s ease-in-out infinite alternate}
