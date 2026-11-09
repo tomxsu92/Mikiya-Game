@@ -218,6 +218,20 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:3px;border-rad
 .rank{font-family:var(--display);font-size:19px;color:var(--gold);text-align:right}
 .rank small{display:block;font-family:var(--body);font-size:11.5px;color:var(--muted);font-weight:700}
 
+/* Drag and drop */
+.item{touch-action:pan-x}
+.slot,.chip,.diner,.sauce{touch-action:none}
+.ghost{position:fixed;left:0;top:0;width:70px;pointer-events:none;z-index:50;margin:-34px 0 0 -35px;filter:drop-shadow(0 10px 8px #000c);will-change:transform}
+.ghost svg{width:100%;display:block;transform:rotate(-8deg) scale(1.08)}
+.ghost .dot{position:absolute;right:0;bottom:2px;width:16px;height:16px;border-radius:50%;box-shadow:0 0 0 2px var(--paper)}
+.dragging-food .diner{background:#f4c4301a;box-shadow:0 0 0 2px #f4c43066}
+.diner.over{background:#f4c43040!important;box-shadow:0 0 0 3px var(--gold)!important;transform:scale(1.04)}
+.dragging-food .sauce .cup{box-shadow:0 6px 8px #0008, 0 0 0 2px #ffffff40}
+.sauce.over .cup{box-shadow:0 6px 8px #0008, 0 0 0 3px var(--gold)!important;transform:scale(1.1)}
+.dragging-new .slot.empty{outline-color:var(--gold);outline-style:solid;background:#f4c43026}
+.slot.over{background:#f4c43066!important}
+.chip{cursor:grab}
+
 @media (max-height:690px){
   .diner .av{max-width:62px}.prefs .ic{width:22px;height:14px}.item{width:58px}.item svg{height:22px}.cup{width:min(36px,10.5vw)}
 }
@@ -268,7 +282,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:3px;border-rad
     </div>
 
     <div>
-      <div class="tray-head"><span><b id="trayName">Gold Set</b> · all you can eat</span><span id="trayTip">Tap item, then a spot</span></div>
+      <div class="tray-head"><span><b id="trayName">Gold Set</b> · all you can eat</span><span id="trayTip">Drag into the pot ↑</span></div>
       <div class="tray" id="tray"></div>
     </div>
 
@@ -304,7 +318,8 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:3px;border-rad
     <h2 class="first">Meet your party</h2>
     <p class="lede">Each person shows what they like under their seat. ♥ marks favorite foods. The colored dot is their favorite sauce, the tag is the broth side they prefer, and a crossed-out icon is something they don't want.</p>
     <div class="cards" id="introCards"></div>
-    <p class="lede">Tap a person to feed them, or tap them with empty chopsticks to see what they like. Keep everyone's hunger bar up for 90 seconds.</p>
+    <p class="lede"><b>How to play:</b> drag food from your tray into the left or right side of the pot. When its bar turns green, drag it out, swipe wagyu through a sauce cup, and drop it on the person you want to feed. Tap a person to see what they like.</p>
+    <p class="lede"><b>Watch out:</b> raw or overcooked food loses points, and so does feeding someone something they don't want. Keep everyone's hunger bar up for 90 seconds.</p>
     <button class="go last" id="eat">Let's eat</button>
   </div>
 
@@ -502,11 +517,11 @@ renderSetup();
 /* ===== Table pieces ===== */
 const sauceEls={};
 SAUCES.forEach(s=>{const b=document.createElement('button');b.className='sauce';b.setAttribute('aria-label','Dip in '+s.name);
-  b.innerHTML=`<span class="cup"><i style="background:${s.color}"></i></span><small>${s.short||s.name}</small>`;b.onclick=()=>dip(s.id);$('sauces').appendChild(b);sauceEls[s.id]=b});
+  b.dataset.id=s.id;b.innerHTML=`<span class="cup"><i style="background:${s.color}"></i></span><small>${s.short||s.name}</small>`;b.onclick=()=>dip(s.id);$('sauces').appendChild(b);sauceEls[s.id]=b});
 
 const SLOT_POS=[[25,32,0],[25,68,0],[75,32,1],[75,68,1]];
 const slotEls=SLOT_POS.map(([l,t,side],i)=>{const b=document.createElement('button');b.className='slot empty';b.style.left=l+'%';b.style.top=t+'%';
-  b.setAttribute('aria-label',(side?'Right':'Left')+' side spot');b.onclick=()=>tapSlot(i);$('slots').appendChild(b);return b});
+  b.dataset.i=i;b.setAttribute('aria-label',(side?'Right':'Left')+' side spot');b.onclick=()=>tapSlot(i);b.addEventListener('pointerdown',e=>press(e,'slot',i));$('slots').appendChild(b);return b});
 const fillSlot=(el,id)=>{el.innerHTML=itemSVG(id)+'<div class="meter"><b></b></div><span class="tag"></span>';el.dataset.item=id};
 
 let itemEls={};
@@ -515,7 +530,7 @@ function buildTray(set){
   const add=id=>{const b=document.createElement('button');b.className='item';b.setAttribute('aria-label',itemName(id));
     const t=isMeat(id)?TIERS[MEATS[id].tier]:null;
     b.innerHTML=itemSVG(id)+`<span class="tier" style="color:${t?t.color:'#9bd26a'}">${t?t.tag:'Veggie'}</span><span class="nm">${isMeat(id)?MEATS[id].short:VEG[id].short}</span>`+(set.limits[id]?'<span class="lim"></span>':'');
-    b.onclick=()=>pickItem(id);tray.appendChild(b);itemEls[id]=b};
+    b.dataset.id=id;b.onclick=()=>pickItem(id);b.addEventListener('pointerdown',e=>press(e,'tray',id));tray.appendChild(b);itemEls[id]=b};
   set.meats.forEach(add);const sep=document.createElement('div');sep.className='sep';tray.appendChild(sep);VEG_IDS.forEach(add);tray.scrollLeft=0;
 }
 function prefIcons(p){
@@ -559,7 +574,7 @@ function buildParty(){
   S.party.forEach((p,i)=>{
     const b=document.createElement('button');b.className='diner';b.setAttribute('aria-label','Feed '+p.name);
     b.innerHTML=`<div class="pops"></div>${avatarSVG(p)}<span class="nm">${p.name}</span><div class="hunger"><div></div></div><div class="prefs">${prefIcons(p)}</div>`;
-    b.onclick=()=>feed(i);el.appendChild(b);p.el=b;p.mood=null;p.moodT=0;
+    b.dataset.i=i;b.onclick=()=>feed(i);el.appendChild(b);p.el=b;p.mood=null;p.moodT=0;
   });
 }
 function limitFor(id){const l=S.set.limits[id];return l?l*S.party.length:0}
@@ -606,12 +621,14 @@ function render(){
 function hint(){
   if(hintLock)return;
   let h;
-  if(ready(S.hold))h='Tap someone to feed them.';
-  else if(S.hold)h='Wagyu needs sauce. Dip it in a cup.';
+  if(drag&&drag.type==='new')h='Drop it on the left or right side of the pot.';
+  else if(drag)h=isMeat(drag.id)&&!drag.sauce?'Swipe it through a sauce cup, then onto a person.':'Drop it on a person to feed them.';
+  else if(ready(S.hold))h='Drag it onto someone to feed them.';
+  else if(S.hold)h='Drag it through a sauce cup first.';
   else if(S.sel)h=`Tap an empty spot on the left or right side.`;
-  else if(S.slots.some(s=>s&&s.d>=RAW&&s.d<=OVER))h='Ready! Tap a green item to lift it.';
-  else if(S.slots.some(Boolean))h='Cooking… lift it when the bar hits green.';
-  else h='Pick something from your tray.';
+  else if(S.slots.some(s=>s&&s.d>=RAW&&s.d<=OVER))h='Ready! Drag the green one out of the pot.';
+  else if(S.slots.some(Boolean))h='Cooking… take it out when the bar turns green.';
+  else h='Drag something from your tray into the pot.';
   $('hint').textContent=h;
 }
 function flashHint(t,ms=1600){const h=$('hint');h.textContent=t;h.style.color='var(--gold)';clearTimeout(hintLock);hintLock=setTimeout(()=>{h.style.color='';hintLock=0},ms)}
@@ -657,29 +674,116 @@ function feed(i){
   const p=S.party[i];
   if(!S.hold){const sd=sauceById(p.dislike);flashHint(`${p.name} loves ${itemShort(p.favs[0])} & ${itemShort(p.favs[1])} with ${sauceById(p.sauce).name}${p.side!==null?`, ${BROTHS[p.side?cfg.R:cfg.L].short} side`:''}. No ${sd?sd.name:itemShort(p.dislike)}.`,3200);return}
   if(!ready(S.hold)){flashHint('Wagyu needs sauce. Dip it first!');return}
-  const {id,d,sauce,side}=S.hold;
-  let pts=0,msgs=[];
+  const item=S.hold;S.hold=null;feedItem(i,item);renderHand();render();
+}
+function feedItem(i,item){
+  const p=S.party[i],{id,d,sauce,side}=item;
+  let pts=0;const msgs=[];
   const wasFull=p.hunger>.88;
   p.bites++;
   if(isMeat(id))p.meatBites++;
-  if(d<RAW){pts-=3;p.raw++;msgs.push(['Too raw!','bad'])}
-  else if(d<=OVER){pts+=3}
-  else{pts+=1;p.over++;msgs.push([isMeat(id)?'Chewy…':'Mushy…','gold'])}
-  if(p.favs.includes(id)){pts+=3;p.favBites++;msgs.unshift(['My favorite!','good'])}
-  if(id===p.dislike||sauce===p.dislike){pts-=3;p.disliked++;msgs.unshift(['I don\'t want that!','bad'])}
-  if(isMeat(id)&&sauce===p.sauce){pts+=2;p.sauceHits++}
-  if(p.side!==null&&side===p.side){pts+=1;p.sideHits++}
-  if(wasFull){pts-=1;p.full++;msgs.push(['I\'m full!','gold'])}
+  if(d<RAW){pts=-3;p.raw++;msgs.push(['Too raw!','bad'])}
+  else if(d>OVER){pts=-2;p.over++;msgs.push(['Overcooked!','bad'])}
+  else{
+    pts=3;
+    if(p.favs.includes(id)){pts+=3;p.favBites++;msgs.push(['My favorite!','good'])}
+    if(isMeat(id)&&sauce===p.sauce){pts+=2;p.sauceHits++}
+    if(p.side!==null&&side===p.side){pts+=1;p.sideHits++}
+  }
+  if(id===p.dislike||sauce===p.dislike){pts=Math.min(pts,0)-4;p.disliked++;msgs.unshift(['I don\'t want that!','bad'])}
+  if(wasFull){pts-=1;p.full++;if(!msgs.length)msgs.push(['I\'m full!','gold'])}
   p.total+=pts;
-  p.hunger=Math.min(1,p.hunger+(d<RAW?.15:.4));
+  p.hunger=Math.min(1,p.hunger+(d<RAW?.15:d>OVER?.3:.4));
   const gain=pts>0?pts*10*S.broths[side].mult:pts*10;S.score+=gain;
-  const good=pts>=5,bad=pts<0;
-  p.moodMood=bad?'yuck':good?'happy':'ok';p.moodT=1;
-  const [txt,kind]=msgs[0]||[good?'Yum!':'Thanks!','good'];
-  popAt(p,`${txt} ${gain>0?'+'+Math.round(gain):Math.round(gain)}`,kind==='bad'?'var(--bad)':kind==='gold'?'var(--gold)':'var(--good)');
+  p.moodMood=pts<0?'yuck':pts>=5?'happy':'ok';p.moodT=1;
+  const [txt,kind]=msgs[0]||[pts>=5?'Yum!':'Thanks!','good'];
+  popAt(p,`${txt} ${gain>0?'+':''}${Math.round(gain)}`,gain<0?'var(--bad)':kind==='gold'?'var(--gold)':'var(--good)');
   p.el.classList.add('fed');setTimeout(()=>p.el.classList.remove('fed'),250);
-  S.hold=null;renderHand();render();
 }
+
+/* ===== Drag and drop ===== */
+let pressing=null,drag=null,ghost=null,suppressClick=false,overEl=null;
+function press(e,kind,ref){
+  if(!S||!S.running||(e.pointerType==='mouse'&&e.button!==0))return;
+  pressing={kind,ref,x:e.clientX,y:e.clientY,pid:e.pointerId};
+}
+function beginDrag(p){
+  if(p.kind==='tray'){
+    const lim=limitFor(p.ref);
+    if(lim&&(S.used[p.ref]||0)>=lim){flashHint(`${itemName(p.ref)} is limited to ${S.set.limits[p.ref]} per person.`);return false}
+    drag={type:'new',id:p.ref};S.sel=null;
+  }else if(p.kind==='slot'){
+    const sl=S.slots[p.ref];if(!sl)return false;
+    if(S.hold){flashHint('Your chopsticks are full. Feed or toss first.');return false}
+    drag={type:'food',...sl,sauce:null,from:'slot',idx:p.ref};S.slots[p.ref]=null;
+  }else{
+    if(!S.hold)return false;
+    drag={type:'food',...S.hold,from:'hand'};S.hold=null;renderHand();
+  }
+  ghost=document.createElement('div');ghost.className='ghost';ghost.innerHTML=itemSVG(drag.id)+(drag.sauce?`<span class="dot" style="background:${sauceById(drag.sauce).color}"></span>`:'');
+  paint(ghost.querySelector('svg'),drag.id,drag.type==='new'?0:drag.d);
+  document.body.appendChild(ghost);
+  $('app').classList.add(drag.type==='new'?'dragging-new':'dragging-food');
+  render();return true;
+}
+function moveGhost(x,y){ghost.style.transform=`translate3d(${x}px,${y}px,0)`}
+function targetAt(x,y){const el=document.elementFromPoint(x,y);return el||null}
+function setOver(el){if(overEl===el)return;if(overEl)overEl.classList.remove('over');overEl=el;if(el)el.classList.add('over')}
+function hoverDrag(x,y){
+  const el=targetAt(x,y);
+  if(drag.type==='new'){
+    let slot=el&&el.closest('.slot.empty');
+    if(!slot&&el&&el.closest('.broth')){const i=sideSlot(el.closest('.broth'),x);slot=i>=0?slotEls[i]:null}
+    setOver(slot);
+  }else{
+    const cup=el&&el.closest('.sauce'),din=el&&el.closest('.diner');
+    if(cup&&!drag.sauce){drag.sauce=cup.dataset.id;
+      const dot=document.createElement('span');dot.className='dot';dot.style.background=sauceById(drag.sauce).color;ghost.appendChild(dot);hint()}
+    setOver(cup||din||null);
+  }
+}
+function sideSlot(broth,x){
+  const r=broth.getBoundingClientRect(),side=x<r.left+r.width/2?0:1;
+  return S.slots.findIndex((s,i)=>!s&&SLOT_POS[i][2]===side);
+}
+function endDrag(x,y,cancel){
+  const el=cancel?null:targetAt(x,y),d=drag;drag=null;
+  setOver(null);ghost&&ghost.remove();ghost=null;
+  $('app').classList.remove('dragging-new','dragging-food');
+  if(d.type==='new'){
+    let i=-1;const slot=el&&el.closest('.slot.empty');
+    if(slot)i=+slot.dataset.i;else if(el&&el.closest('.broth'))i=sideSlot(el.closest('.broth'),x);
+    if(i>=0&&!S.slots[i]){S.slots[i]={id:d.id,d:0,side:SLOT_POS[i][2]};if(S.set.limits[d.id]){S.used[d.id]=(S.used[d.id]||0)+1;renderLimits()}}
+    else if(el&&el.closest('.pot'))flashHint('That side is full. Take something out first.');
+    render();return;
+  }
+  const item={id:d.id,d:d.d,side:d.side,sauce:d.sauce};
+  const din=el&&el.closest('.diner'),slot=el&&el.closest('.slot.empty');
+  if(din){
+    if(!ready(item)){S.hold=item;flashHint('Wagyu needs sauce. Swipe it through a cup first!')}
+    else feedItem(+din.dataset.i,item);
+  }else if(slot){const i=+slot.dataset.i;S.slots[i]={id:item.id,d:item.d,side:SLOT_POS[i][2]}}
+  else if(d.from==='slot'&&!item.sauce&&!(el&&el.closest('.sauce,.status'))&&!S.slots[d.idx])S.slots[d.idx]={id:item.id,d:item.d,side:d.side};
+  else S.hold=item;
+  renderHand();render();
+}
+document.addEventListener('pointermove',e=>{
+  if(pressing&&!drag&&e.pointerId===pressing.pid){
+    const dx=e.clientX-pressing.x,dy=e.clientY-pressing.y;
+    if(Math.hypot(dx,dy)>8){
+      const p=pressing;pressing=null;
+      if(p.kind==='tray'&&Math.abs(dx)>Math.abs(dy)*1.2)return;
+      if(!beginDrag(p))return;
+    }
+  }
+  if(drag){e.preventDefault();moveGhost(e.clientX,e.clientY);hoverDrag(e.clientX,e.clientY)}
+},{passive:false});
+document.addEventListener('pointerup',e=>{
+  pressing=null;
+  if(drag){endDrag(e.clientX,e.clientY,false);suppressClick=true;setTimeout(()=>suppressClick=false,60)}
+});
+document.addEventListener('pointercancel',e=>{pressing=null;if(drag)endDrag(e.clientX,e.clientY,true)});
+document.addEventListener('click',e=>{if(suppressClick){e.stopPropagation();e.preventDefault();suppressClick=false}},true);
 function toss(){if(!S||!S.hold)return;S.hold=null;renderHand();render()}
 function popAt(p,text,color){const el=document.createElement('div');el.className='pop';el.textContent=text;el.style.color=color;p.el.querySelector('.pops').appendChild(el);setTimeout(()=>el.remove(),1250)}
 
@@ -701,7 +805,7 @@ function comments(p){
   if(p.meatBites){const pct=Math.round(p.sauceHits/p.meatBites*100);c.push(pct>=60?`Loved the ${sauceById(p.sauce).name} on their wagyu`:`Wanted more ${sauceById(p.sauce).name} (${p.sauceHits}/${p.meatBites} wagyu bites)`)}
   if(p.raw)c.push(`Got raw food ${p.raw}×`);
   if(p.disliked)c.push(`Got something they didn't want ${p.disliked}×`);
-  if(p.over)c.push(`${p.over} bite${p.over>1?'s were':' was'} overcooked`);
+  if(p.over)c.push(`Got overcooked food ${p.over}×`);
   if(p.starve>GAME_TIME*.15)c.push(`Sat hungry for ${Math.round(p.starve)} seconds`);
   if(p.full>1)c.push(`Was fed while already full ${p.full}×`);
   if(c.length<3&&p.side!==null&&p.sideHits)c.push(`Enjoyed the ${BROTHS[p.side?cfg.R:cfg.L].short} side`);
@@ -709,6 +813,7 @@ function comments(p){
 }
 const starStr=n=>{let s='';for(let i=1;i<=5;i++)s+=n>=i?'★':n>=i-.5?'<span style="position:relative;display:inline-block">☆<span style="position:absolute;left:0;top:0;width:50%;overflow:hidden">★</span></span>':'<span class="off">★</span>';return s};
 function endGame(){
+  if(drag)endDrag(0,0,true);
   S.running=false;S.time=0;render();
   let sum=0;
   $('endCards').innerHTML=S.party.map(p=>{const r=rate(p);sum+=r;const word=r>=4.5?'Delighted':r>=3.5?'Happy':r>=2.5?'Okay':r>=1.5?'Disappointed':'Unhappy';
@@ -729,6 +834,7 @@ function endGame(){
 }
 
 $('toss').onclick=toss;
+$('chip').addEventListener('pointerdown',e=>press(e,'hand'));
 $('go').onclick=setupGame;
 $('eat').onclick=startGame;
 $('again').onclick=setupGame;
