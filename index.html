@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Swish &amp; Feed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font-size:14px}
+[hidden]{display:none!important}
+img{max-width:100%}
+/* Layout: one-screen tabletop seen from above — the little one at the far side, the pot in the middle, sauces and the wagyu plate at your hand */
+:root{
+  --table:#1d2b3c;
+  --table-2:#27394f;
+  --copper:#c97a45;
+  --copper-dk:#7f4523;
+  --paper:#f7efdf;
+  --ink:#17212d;
+  --muted:#a3b3c6;
+  --good:#5ccb8c;
+  --bad:#f06c5b;
+  --gold:#f4c430;
+  --broth:#e6cf97;
+  --display:"Dela Gothic One","Arial Black",system-ui,sans-serif;
+  --body:"M PLUS Rounded 1c",ui-rounded,system-ui,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{
+  background:var(--table);
+  background-image:radial-gradient(120% 70% at 50% 45%, var(--table-2), var(--table) 70%);
+  color:var(--paper);font-family:var(--body);font-weight:500;
+  overflow:hidden;touch-action:manipulation;-webkit-user-select:none;user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:3px;border-radius:12px}
+
+#app{
+  height:100%;max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:8px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+  padding-block:10px;position:relative;
+}
+
+/* HUD */
+.hud{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.stat{display:flex;flex-direction:column;line-height:1.1}
+.stat small{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.stat b{font-family:var(--display);font-weight:400;font-size:22px;font-variant-numeric:tabular-nums}
+.stat.time{align-items:center}
+.stat.hearts{align-items:flex-end}
+.hearts-row{display:flex;gap:3px;font-size:17px;line-height:1.3}
+.hearts-row span{color:var(--bad)}
+.hearts-row span.off{color:#ffffff2a}
+.combo{font-size:11px;color:var(--gold);font-weight:800;min-height:13px}
+
+/* Kid */
+.kid-zone{display:flex;align-items:center;gap:10px;min-height:96px}
+.kid-btn{width:96px;flex:none;position:relative}
+.kid{width:100%;display:block;transition:transform .15s}
+.kid-btn:active .kid{transform:scale(.95)}
+.kid .m,.kid .e{display:none}
+.kid[data-ex="idle"] .m-idle,.kid[data-ex="open"] .m-open,.kid[data-ex="happy"] .m-happy,.kid[data-ex="yuck"] .m-yuck{display:inline}
+.kid[data-ex="happy"] .e-happy,.kid:not([data-ex="happy"]) .e-open{display:inline}
+.kid[data-ex="yuck"] .brow{display:inline}
+.kid .brow{display:none}
+.kid[data-ex="open"]{animation:bob .6s ease-in-out infinite alternate}
+@keyframes bob{to{transform:translateY(-3px)}}
+
+.bubble{
+  flex:1;min-width:0;background:var(--paper);color:var(--ink);border-radius:18px;padding:10px 12px 12px;
+  position:relative;box-shadow:0 6px 0 #0003;
+}
+.bubble::before{content:"";position:absolute;left:-9px;top:50%;margin-top:-9px;border:9px solid transparent;border-right-color:var(--paper);border-left:0}
+.bubble .who{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#6b7686;font-weight:800}
+.want{display:flex;align-items:center;gap:8px;font-family:var(--display);font-size:19px;line-height:1.15;margin-top:2px}
+.want i{width:22px;height:22px;border-radius:50%;flex:none;box-shadow:inset 0 -3px 0 #0003, 0 0 0 2px #0002}
+.patience{height:6px;border-radius:6px;background:#17212d1a;margin-top:8px;overflow:hidden}
+.patience div{height:100%;width:100%;background:var(--good);border-radius:6px;transform-origin:left;transition:background .3s}
+
+/* Pot */
+.pot-zone{flex:1;min-height:0;display:grid;place-items:center;container-type:size;position:relative}
+.pot{
+  width:min(100cqw,100cqh,330px);aspect-ratio:1/1;border-radius:50%;position:relative;
+  background:radial-gradient(circle at 35% 30%, #e9a06b, var(--copper) 40%, var(--copper-dk));
+  box-shadow:0 14px 30px #0007, inset 0 -6px 12px #0004;
+  padding:7%;
+}
+.broth{
+  width:100%;height:100%;border-radius:50%;position:relative;overflow:hidden;
+  background:radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--broth) 70%, #fff), var(--broth) 55%, color-mix(in srgb, var(--broth) 70%, #000));
+  box-shadow:inset 0 6px 16px #0006;
+}
+.broth::after{content:"";position:absolute;inset:0;border-radius:50%;
+  background:radial-gradient(circle at 30% 70%, #fff3 0 4%, transparent 5%),radial-gradient(circle at 70% 40%, #fff3 0 3%, transparent 4%),radial-gradient(circle at 55% 80%, #fff2 0 2.5%, transparent 3.5%);
+  animation:simmer 2.4s ease-in-out infinite alternate}
+@keyframes simmer{to{transform:scale(1.04) rotate(8deg)}}
+.broth-name{position:absolute;left:50%;bottom:-2px;transform:translate(-50%,100%);font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.steam{position:absolute;inset:0;pointer-events:none}
+.steam span{position:absolute;bottom:55%;width:18%;height:40%;border-radius:50%;background:radial-gradient(#ffffff30,transparent 70%);filter:blur(4px);animation:steam 3.2s ease-in infinite;opacity:0}
+.steam span:nth-child(1){left:20%;animation-delay:0s}
+.steam span:nth-child(2){left:46%;animation-delay:1.1s}
+.steam span:nth-child(3){left:66%;animation-delay:2.1s}
+@keyframes steam{0%{transform:translateY(20%) scale(.6);opacity:0}30%{opacity:1}100%{transform:translateY(-90%) scale(1.3);opacity:0}}
+
+.slot{position:absolute;width:38%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;border-radius:14px;padding:4px}
+.slot.empty{outline:2px dashed #ffffff40;outline-offset:-4px;aspect-ratio:1.5/1;border-radius:50%}
+.slot svg{width:100%;display:block;filter:drop-shadow(0 3px 2px #0005)}
+.slot:not(.empty) svg{animation:swish 1.3s ease-in-out infinite alternate}
+.slot:nth-child(2):not(.empty) svg{animation-delay:-.5s}
+.slot:nth-child(3):not(.empty) svg{animation-delay:-.9s}
+@keyframes swish{from{transform:rotate(-7deg) translateX(-3px)}to{transform:rotate(7deg) translateX(3px)}}
+.meter{width:84%;height:7px;border-radius:7px;position:relative;overflow:hidden;
+  background:linear-gradient(90deg,#ffffff38 0 30.8%, #5ccb8c 30.8% 61.5%, #f06c5b66 61.5%);box-shadow:0 0 0 1.5px #0005}
+.meter b{position:absolute;top:-2px;bottom:-2px;width:3px;background:#fff;border-radius:2px;box-shadow:0 0 0 1px var(--ink)}
+.slot .tag{font-size:10px;font-weight:800;padding:1px 6px;border-radius:8px;background:#0007;line-height:1.4}
+.slot .tag.ok{background:var(--good);color:var(--ink)}
+.slot .tag.over{background:var(--bad);color:var(--ink)}
+.slot.empty .meter,.slot.empty .tag,.slot.empty svg{display:none}
+
+/* Hand */
+.hand{display:flex;align-items:center;gap:10px;min-height:46px;background:#0000002a;border-radius:14px;padding:6px 10px}
+.hand .chop{width:40px;flex:none;position:relative;height:30px}
+.hand .chop svg{width:100%;height:100%}
+.hand .txt{flex:1;min-width:0;font-size:13px;line-height:1.3}
+.hand .txt b{display:block;font-size:14px}
+.hand .txt span{color:var(--muted)}
+.toss{font-size:12px;font-weight:800;padding:6px 10px;border-radius:10px;background:#ffffff14;color:var(--muted)}
+
+/* Sauces */
+.sauces{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.sauce{display:flex;flex-direction:column;align-items:center;gap:4px;padding:4px 0;border-radius:12px;transition:transform .1s}
+.sauce:active{transform:scale(.92)}
+.bowl{width:min(52px,15vw);aspect-ratio:1/1;border-radius:50%;background:#f2ece2;padding:16%;box-shadow:0 4px 0 #0005, inset 0 -3px 0 #0002}
+.bowl i{display:block;width:100%;height:100%;border-radius:50%;box-shadow:inset 0 3px 5px #0005}
+.sauce small{font-size:11px;font-weight:700;line-height:1.15;text-align:center}
+.sauce.wanted .bowl{box-shadow:0 4px 0 #0005, 0 0 0 3px var(--gold)}
+
+/* Plate */
+.plate{
+  display:flex;align-items:center;justify-content:center;gap:12px;padding:8px 14px;border-radius:16px;
+  background:var(--paper);color:var(--ink);font-family:var(--display);font-size:17px;box-shadow:0 5px 0 #0006;transition:transform .1s
+}
+.plate:active{transform:translateY(3px);box-shadow:0 2px 0 #0006}
+.plate svg{width:54px;height:34px;flex:none}
+.hint{text-align:center;font-size:12.5px;color:var(--muted);min-height:16px;font-weight:700}
+
+/* Pops */
+.pop{position:absolute;left:50%;top:0;transform:translateX(-50%);font-family:var(--display);font-size:20px;white-space:nowrap;pointer-events:none;
+  animation:pop 1.1s ease-out forwards;text-shadow:0 2px 0 #0008;z-index:5}
+@keyframes pop{0%{opacity:0;transform:translate(-50%,10px) scale(.8)}15%{opacity:1;transform:translate(-50%,0) scale(1.1)}100%{opacity:0;transform:translate(-50%,-40px) scale(1)}}
+
+/* Overlays */
+.overlay{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;justify-content:center;gap:14px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:16px;
+  background:color-mix(in srgb, var(--table) 94%, transparent);overflow-y:auto}
+.overlay h1{font-family:var(--display);font-weight:400;font-size:clamp(34px,11vw,48px);line-height:1;margin:0;text-wrap:balance}
+.overlay h1 em{font-style:normal;color:var(--gold)}
+.lede{margin:0;color:var(--muted);font-size:14px;line-height:1.5;max-width:40ch}
+.steps{margin:0;padding:0;list-style:none;display:grid;gap:6px;font-size:13.5px}
+.steps li{display:flex;gap:10px;align-items:center}
+.steps li b{font-family:var(--display);font-weight:400;width:24px;height:24px;border-radius:50%;background:var(--copper);color:var(--ink);display:grid;place-items:center;font-size:13px;flex:none}
+.label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:800;margin:4px 0 -6px}
+.broths{display:grid;gap:6px}
+.broth-opt{display:flex;align-items:center;gap:12px;text-align:left;padding:8px 12px;border-radius:14px;background:#ffffff0d;border:2px solid transparent}
+.broth-opt[aria-pressed="true"]{border-color:var(--gold);background:#ffffff18}
+.broth-opt i{width:30px;height:30px;border-radius:50%;flex:none;box-shadow:0 0 0 3px var(--copper), inset 0 -4px 0 #0003}
+.broth-opt span{flex:1;min-width:0;line-height:1.25}
+.broth-opt b{display:block;font-size:15px}
+.broth-opt small{color:var(--muted);font-size:12px}
+.broth-opt em{font-style:normal;font-size:12px;font-weight:800;color:var(--gold);font-variant-numeric:tabular-nums}
+.go{font-family:var(--display);font-size:22px;background:var(--gold);color:var(--ink);border-radius:16px;padding:14px;box-shadow:0 5px 0 #8a6a0c}
+.go:active{transform:translateY(3px);box-shadow:0 2px 0 #8a6a0c}
+.final{font-family:var(--display);font-size:64px;line-height:1;font-variant-numeric:tabular-nums}
+.rank{font-family:var(--display);font-size:22px;color:var(--gold)}
+.endstats{display:flex;gap:18px;color:var(--muted);font-size:13px}
+.endstats b{display:block;color:var(--paper);font-size:18px}
+.sub{background:#ffffff14;color:var(--paper);font-family:var(--body);font-weight:800;font-size:15px;padding:12px;border-radius:14px}
+
+@media (max-height:640px){
+  .kid-zone{min-height:80px}.kid-btn{width:78px}.want{font-size:16px}
+  .plate{padding:6px 12px}.hand{min-height:40px}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="hud">
+    <div class="stat"><small>Score</small><b id="score">0</b></div>
+    <div class="stat time"><small>Time</small><b id="time">75</b><div class="combo" id="combo"></div></div>
+    <div class="stat hearts"><small>Happiness</small><div class="hearts-row" id="hearts"></div></div>
+  </div>
+
+  <div class="kid-zone">
+    <button class="kid-btn" id="kidBtn" aria-label="Feed the little one">
+      <svg class="kid" id="kid" data-ex="idle" viewBox="0 0 120 120" aria-hidden="true">
+        <path d="M30 116 C30 98 90 98 90 116Z" fill="#7fb6d9"/>
+        <path d="M44 104 L60 116 L76 104 C70 100 50 100 44 104Z" fill="#fff"/>
+        <circle cx="60" cy="62" r="42" fill="#f3cfa6"/>
+        <path d="M18 58 C16 18 104 18 102 58 C96 40 82 33 60 35 C38 33 24 40 18 58Z" fill="#2b2320"/>
+        <path d="M54 22 C54 8 72 8 66 20" fill="none" stroke="#2b2320" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="34" cy="78" r="7" fill="#f2907e" opacity=".55"/>
+        <circle cx="86" cy="78" r="7" fill="#f2907e" opacity=".55"/>
+        <g class="e e-open"><circle cx="44" cy="64" r="5.5" fill="#17212d"/><circle cx="76" cy="64" r="5.5" fill="#17212d"/><circle cx="45.8" cy="62" r="1.8" fill="#fff"/><circle cx="77.8" cy="62" r="1.8" fill="#fff"/></g>
+        <g class="e e-happy" fill="none" stroke="#17212d" stroke-width="3.5" stroke-linecap="round"><path d="M38 66 Q44 58 50 66"/><path d="M70 66 Q76 58 82 66"/></g>
+        <g class="brow" fill="none" stroke="#17212d" stroke-width="3" stroke-linecap="round"><path d="M37 54 L50 57"/><path d="M83 54 L70 57"/></g>
+        <path class="m m-idle" d="M52 84 Q60 91 68 84" fill="none" stroke="#17212d" stroke-width="3.2" stroke-linecap="round"/>
+        <g class="m m-open"><ellipse cx="60" cy="87" rx="9" ry="10" fill="#7a2b2b"/><ellipse cx="60" cy="92" rx="6" ry="4" fill="#e9707a"/></g>
+        <path class="m m-happy" d="M47 82 Q60 100 73 82 Z" fill="#7a2b2b" stroke="#17212d" stroke-width="2.5" stroke-linejoin="round"/>
+        <path class="m m-yuck" d="M47 88 q4 -5 8 0 t9 0 t9 0" fill="none" stroke="#17212d" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <div id="pops"></div>
+    </button>
+    <div class="bubble">
+      <div class="who">The little one wants</div>
+      <div class="want"><i id="wantDot"></i><span id="wantTxt">Ponzu</span></div>
+      <div class="patience"><div id="patience"></div></div>
+    </div>
+  </div>
+
+  <div class="pot-zone">
+    <div class="pot">
+      <div class="broth" id="broth">
+        <div class="steam"><span></span><span></span><span></span></div>
+        <div id="slots"></div>
+      </div>
+      <div class="broth-name" id="brothName">House Broth</div>
+    </div>
+  </div>
+
+  <div class="hand">
+    <div class="chop" id="chop"></div>
+    <div class="txt" id="handTxt"><b>Chopsticks empty</b><span>Lift a slice from the pot</span></div>
+    <button class="toss" id="toss" hidden>Toss</button>
+  </div>
+
+  <div class="sauces" id="sauces"></div>
+
+  <button class="plate" id="plate">
+    <svg viewBox="0 0 54 34" aria-hidden="true">
+      <ellipse cx="27" cy="22" rx="26" ry="11" fill="#e3d9c6"/><ellipse cx="27" cy="20" rx="20" ry="7.5" fill="#cfc3ad"/>
+      <path d="M10 18 C12 10 30 8 40 11 C48 13 46 21 38 23 C28 26 12 25 10 18Z" fill="#c42a3e"/>
+      <path d="M16 16 C22 13 28 19 34 15 S42 14 43 17" fill="none" stroke="#fff4ee" stroke-width="1.6" stroke-linecap="round"/>
+      <path d="M17 21 C24 18 29 22 36 20" fill="none" stroke="#fff4ee" stroke-width="1.2" stroke-linecap="round"/>
+    </svg>
+    Add wagyu to pot
+  </button>
+  <div class="hint" id="hint"></div>
+
+  <!-- Start -->
+  <div class="overlay" id="start">
+    <h1>Swish <em>&amp;</em> Feed</h1>
+    <p class="lede">Your little one is hungry and wants wagyu. Cook each slice just right, dip it in the sauce they ask for, and keep them smiling.</p>
+    <ol class="steps">
+      <li><b>1</b>Tap the plate to swish a slice into the pot</li>
+      <li><b>2</b>Lift it when the bar is in the green</li>
+      <li><b>3</b>Dip it in the sauce they want</li>
+      <li><b>4</b>Tap the little one to feed them</li>
+    </ol>
+    <div class="label">Pick your broth</div>
+    <div class="broths" id="brothOpts"></div>
+    <button class="go" id="go">Start cooking</button>
+  </div>
+
+  <!-- End -->
+  <div class="overlay" id="end" hidden>
+    <div class="label" id="endWhy">Time's up</div>
+    <div class="final" id="finalScore">0</div>
+    <div class="rank" id="rank">Shabu Master</div>
+    <div class="endstats">
+      <div><b id="eFed">0</b>bites fed</div>
+      <div><b id="ePerfect">0</b>perfect</div>
+      <div><b id="eBest">0</b>best combo</div>
+    </div>
+    <p class="lede" id="bestLine"></p>
+    <button class="go" id="again">Play again</button>
+    <button class="sub" id="change">Change broth</button>
+  </div>
+</div>
+
+<script>
+const SAUCES=[
+  {id:'ponzu',name:'Ponzu',color:'#b5732e'},
+  {id:'sesame',name:'Sesame',color:'#dcc08e'},
+  {id:'soy',name:'Soy Sauce',color:'#3b2416'},
+  {id:'spicy',name:'Spicy Soy',color:'#9c2a16'},
+  {id:'egg',name:'Pasteurized Egg',short:'Egg',color:'#f4c430'}
+];
+const BROTHS=[
+  {id:'house',name:'House Broth',color:'#e6cf97',speed:1,mult:1,note:'Mellow. Steady cooking.'},
+  {id:'yakiniku',name:'Yakiniku Broth',color:'#8a4f2a',speed:1.12,mult:1.1,note:'Rich. Cooks a little faster.'},
+  {id:'tomato',name:'Japanese Tomato Broth',color:'#cf3a2c',speed:.88,mult:.9,note:'Gentle. More time to think.'},
+  {id:'miso',name:'Spicy Miso Broth',color:'#c46a2c',speed:1.28,mult:1.25,note:'Hot! Cooks fast.'},
+  {id:'tomyum',name:'Tom Yum Broth',color:'#e89a2c',speed:1.42,mult:1.4,note:'Hottest. Fastest cooking.'}
+];
+const GAME_TIME=75, RATE=1/6, RAW=.4, OVER=.8, CAP=1.3;
+const $=id=>document.getElementById(id);
+
+// Meat color by doneness
+const STOPS=[[0,[196,38,60]],[.4,[222,150,140]],[.8,[176,122,98]],[1.3,[104,80,68]]];
+function meatColor(d){
+  for(let i=1;i<STOPS.length;i++){
+    if(d<=STOPS[i][0]){
+      const [a,ca]=STOPS[i-1],[b,cb]=STOPS[i],t=(d-a)/(b-a);
+      return `rgb(${ca.map((c,k)=>Math.round(c+(cb[k]-c)*t)).join(',')})`;
+    }
+  }
+  return 'rgb(104,80,68)';
+}
+const SLICE=`<svg viewBox="0 0 100 64" aria-hidden="true"><path class="meat" d="M8 22 C10 6 40 2 60 6 C82 9 96 18 92 36 C89 54 64 60 42 58 C20 56 5 46 8 22Z"/><g class="fat" fill="none" stroke="#fff4ee" stroke-linecap="round"><path d="M18 22 C30 16 40 30 54 22 S78 18 84 28" stroke-width="3"/><path d="M16 38 C28 32 36 44 50 38 S70 34 82 42" stroke-width="2.2"/><path d="M30 50 C40 46 52 52 64 48" stroke-width="1.6"/><path d="M38 13 C46 10 56 16 66 12" stroke-width="1.6"/></g></svg>`;
+function paintSlice(svg,d){
+  svg.querySelector('.meat').setAttribute('fill',meatColor(d));
+  svg.querySelector('.fat').setAttribute('opacity',Math.max(.25,.9-d*.5).toFixed(2));
+}
+function doneLabel(d){return d<RAW?['Raw','']:d<=OVER?['Perfect','ok']:['Overcooked','over']}
+
+// Build sauce bowls
+const sauceEls={};
+SAUCES.forEach(s=>{
+  const b=document.createElement('button');
+  b.className='sauce';b.setAttribute('aria-label','Dip in '+s.name);
+  b.innerHTML=`<span class="bowl"><i style="background:${s.color}"></i></span><small>${s.short||s.name}</small>`;
+  b.onclick=()=>dip(s.id);
+  $('sauces').appendChild(b);sauceEls[s.id]=b;
+});
+
+// Build pot slots
+const SLOT_POS=[[30,34],[70,34],[50,70]];
+const slotEls=SLOT_POS.map(([l,t],i)=>{
+  const b=document.createElement('button');
+  b.className='slot empty';b.style.left=l+'%';b.style.top=t+'%';
+  b.innerHTML=SLICE+'<div class="meter"><b></b></div><span class="tag">Raw</span>';
+  b.setAttribute('aria-label','Pot spot '+(i+1));
+  b.onclick=()=>lift(i);
+  $('slots').appendChild(b);return b;
+});
+
+// Broth picker
+let brothIdx=0;
+try{const v=localStorage.getItem('swish-broth');if(v!==null&&BROTHS[+v])brothIdx=+v}catch(e){}
+function renderBrothOpts(){
+  $('brothOpts').innerHTML='';
+  BROTHS.forEach((b,i)=>{
+    const o=document.createElement('button');
+    o.className='broth-opt';o.setAttribute('aria-pressed',i===brothIdx);
+    o.innerHTML=`<i style="background:${b.color}"></i><span><b>${b.name}</b><small>${b.note}</small></span><em>×${b.mult.toFixed(2).replace(/0$/,'')}</em>`;
+    o.onclick=()=>{brothIdx=i;try{localStorage.setItem('swish-broth',i)}catch(e){}renderBrothOpts()};
+    $('brothOpts').appendChild(o);
+  });
+}
+renderBrothOpts();
+
+let S=null,last=0,raf=0,kidTimer=0;
+function newGame(){
+  const br=BROTHS[brothIdx];
+  S={br,score:0,combo:0,best:0,hearts:5,time:GAME_TIME,slots:[null,null,null],hold:null,want:null,wantT:0,wantMax:11,fed:0,perfect:0,running:true};
+  document.documentElement.style.setProperty('--broth',br.color);
+  $('brothName').textContent=br.name;
+  newWant();renderHand();setKid('idle');
+  $('start').hidden=true;$('end').hidden=true;
+  last=performance.now();cancelAnimationFrame(raf);raf=requestAnimationFrame(loop);
+}
+function newWant(){
+  let w;do{w=SAUCES[Math.floor(Math.random()*SAUCES.length)].id}while(S.want&&w===S.want&&Math.random()<.7);
+  S.want=w;S.wantMax=Math.max(6,12-S.fed*.25);S.wantT=S.wantMax;
+  const s=SAUCES.find(x=>x.id===w);
+  $('wantDot').style.background=s.color;$('wantTxt').textContent=s.name+', please!';
+  for(const k in sauceEls)sauceEls[k].classList.toggle('wanted',k===w);
+}
+
+function loop(now){
+  const dt=Math.min(.1,(now-last)/1000);last=now;
+  if(S.running){
+    S.time-=dt;
+    S.slots.forEach(sl=>{if(sl)sl.d=Math.min(CAP,sl.d+dt*RATE*S.br.speed)});
+    S.wantT-=dt;
+    if(S.wantT<=0){loseHeart();S.combo=0;pop('Waited too long!','var(--bad)');setKid('yuck',900);newWant()}
+    if(S.time<=0||S.hearts<=0){endGame();}
+    render();
+  }
+  if(S.running)raf=requestAnimationFrame(loop);
+}
+
+function render(){
+  $('score').textContent=S.score;
+  $('time').textContent=Math.max(0,Math.ceil(S.time));
+  $('combo').textContent=S.combo>1?`Combo ×${Math.min(S.combo,5)}`:'';
+  $('hearts').innerHTML=Array.from({length:5},(_,i)=>`<span class="${i<S.hearts?'':'off'}">♥</span>`).join('');
+  const p=Math.max(0,S.wantT/S.wantMax),bar=$('patience');
+  bar.style.transform=`scaleX(${p})`;bar.style.background=p>.5?'var(--good)':p>.25?'var(--gold)':'var(--bad)';
+  S.slots.forEach((sl,i)=>{
+    const el=slotEls[i];el.classList.toggle('empty',!sl);
+    if(sl){
+      paintSlice(el.querySelector('svg'),sl.d);
+      el.querySelector('.meter b').style.left=`calc(${Math.min(sl.d/CAP,1)*100}% - 1.5px)`;
+      const [t,c]=doneLabel(sl.d),tag=el.querySelector('.tag');
+      if(tag.textContent!==t){tag.textContent=t;tag.className='tag '+c}
+    }
+  });
+  hint();
+}
+
+function hint(){
+  let h;
+  if(S.hold&&S.hold.sauce)h='Tap the little one to feed!';
+  else if(S.hold)h='Dip it in the sauce they asked for.';
+  else if(S.slots.some(s=>s&&s.d>=RAW&&s.d<=OVER))h='Ready! Tap a green slice to lift it.';
+  else if(S.slots.some(Boolean))h='Swishing… lift it when the bar hits green.';
+  else h='Tap the plate to add wagyu to the pot.';
+  $('hint').textContent=h;
+}
+
+function renderHand(){
+  const h=S&&S.hold;
+  if(!h){
+    $('chop').innerHTML=`<svg viewBox="0 0 40 30" aria-hidden="true"><path d="M2 8 L38 13" stroke="#d9b98a" stroke-width="3" stroke-linecap="round"/><path d="M2 22 L38 17" stroke="#d9b98a" stroke-width="3" stroke-linecap="round"/></svg>`;
+    $('handTxt').innerHTML='<b>Chopsticks empty</b><span>Lift a cooked slice from the pot</span>';
+    $('toss').hidden=true;
+  }else{
+    const s=h.sauce&&SAUCES.find(x=>x.id===h.sauce);
+    $('chop').innerHTML=SLICE+(s?`<span style="position:absolute;right:2px;bottom:0;width:13px;height:13px;border-radius:50%;background:${s.color};box-shadow:0 0 0 2px var(--paper)"></span>`:'');
+    paintSlice($('chop').querySelector('svg'),h.d);
+    const [t]=doneLabel(h.d);
+    $('handTxt').innerHTML=`<b>${t} slice${s?' + '+s.name:''}</b><span>${s?'Feed the little one':'Needs sauce'}</span>`;
+    $('toss').hidden=false;
+  }
+  setKid(h&&h.sauce?'open':'idle',0,true);
+}
+
+function addSlice(){
+  if(!S||!S.running)return;
+  const i=S.slots.findIndex(s=>!s);
+  if(i<0){flashHint('The pot is full. Lift a slice first.');return}
+  S.slots[i]={d:0};render();
+}
+function lift(i){
+  if(!S.running||!S.slots[i])return;
+  if(S.hold){flashHint('Your chopsticks are full. Feed or toss that slice.');return}
+  S.hold={d:S.slots[i].d,sauce:null};S.slots[i]=null;renderHand();render();
+}
+function dip(id){
+  if(!S||!S.running)return;
+  if(!S.hold){flashHint('Lift a slice from the pot first.');return}
+  if(S.hold.sauce){flashHint('Already dipped! Tap the little one.');return}
+  S.hold.sauce=id;renderHand();render();
+}
+function feed(){
+  if(!S||!S.running)return;
+  if(!S.hold){flashHint('Lift a cooked slice from the pot first.');return}
+  if(!S.hold.sauce){flashHint('Dip it in sauce first!');return}
+  const {d,sauce}=S.hold,right=sauce===S.want,m=S.br.mult;
+  S.fed++;
+  if(d<RAW){loseHeart();S.combo=0;pop('Too raw!','var(--bad)');setKid('yuck',900)}
+  else if(!right){loseHeart();S.combo=0;pop('Wrong sauce!','var(--bad)');setKid('yuck',900)}
+  else if(d>OVER){const p=Math.round(30*m);S.score+=p;S.combo=0;pop('Chewy… +'+p,'var(--gold)');setKid('idle')}
+  else{
+    S.combo++;S.perfect++;S.best=Math.max(S.best,S.combo);
+    const p=Math.round(100*m*Math.min(S.combo,5));S.score+=p;
+    pop((S.combo>2?'Yum yum! +':'Yum! +')+p,'var(--good)');setKid('happy',900);
+  }
+  S.hold=null;renderHand();newWant();render();
+}
+function toss(){if(!S.hold)return;S.hold=null;S.combo=0;renderHand();render()}
+function loseHeart(){S.hearts=Math.max(0,S.hearts-1)}
+
+function setKid(ex,ms=0,soft=false){
+  const k=$('kid');
+  if(soft&&kidTimer)return; // let reactions finish
+  k.dataset.ex=ex;clearTimeout(kidTimer);kidTimer=0;
+  if(ms)kidTimer=setTimeout(()=>{kidTimer=0;k.dataset.ex=S&&S.hold&&S.hold.sauce?'open':'idle'},ms);
+}
+function pop(text,color){
+  const p=document.createElement('div');p.className='pop';p.textContent=text;p.style.color=color;
+  $('pops').appendChild(p);setTimeout(()=>p.remove(),1150);
+}
+let hintLock=0;
+function flashHint(t){
+  const h=$('hint');h.textContent=t;h.style.color='var(--gold)';
+  clearTimeout(hintLock);hintLock=setTimeout(()=>{h.style.color='';hintLock=0},1400);
+}
+// keep flash visible over loop updates
+const _hint=hint;hint=function(){if(!hintLock)_hint()};
+
+function endGame(){
+  S.running=false;
+  const ranks=[[0,'Trainee Feeder'],[400,'Swish Apprentice'],[1000,'Broth Boss'],[2000,'Wagyu Hero'],[3500,'Shabu Master']];
+  let r=ranks[0][1];ranks.forEach(([n,t])=>{if(S.score>=n)r=t});
+  $('endWhy').textContent=S.hearts<=0?'The little one got fussy':"Time's up";
+  $('finalScore').textContent=S.score;$('rank').textContent=r;
+  $('eFed').textContent=S.fed;$('ePerfect').textContent=S.perfect;$('eBest').textContent=S.best;
+  let best=0;try{best=+(localStorage.getItem('swish-best')||0)}catch(e){}
+  if(S.score>best){$('bestLine').textContent=best?`New best on this device! Old best: ${best}.`:'First score on this device. Can you beat it?';try{localStorage.setItem('swish-best',S.score)}catch(e){}}
+  else $('bestLine').textContent=`Best on this device: ${best}.`;
+  $('end').hidden=false;
+}
+
+$('plate').onclick=addSlice;
+$('kidBtn').onclick=feed;
+$('toss').onclick=toss;
+$('go').onclick=newGame;
+$('again').onclick=newGame;
+$('change').onclick=()=>{$('end').hidden=true;renderBrothOpts();$('start').hidden=false};
+document.addEventListener('visibilitychange',()=>{
+  if(!S)return;
+  if(document.hidden){S.paused=S.running;S.running=false;cancelAnimationFrame(raf)}
+  else if(S.paused){S.paused=false;S.running=true;last=performance.now();raf=requestAnimationFrame(loop)}
+});
+// Idle preview behind the start screen
+(function preview(){
+  const demo=[.15,.6,1.0];
+  slotEls.forEach((el,i)=>{el.classList.remove('empty');paintSlice(el.querySelector('svg'),demo[i]);
+    el.querySelector('.meter b').style.left=`calc(${demo[i]/CAP*100}% - 1.5px)`;
+    const [t,c]=doneLabel(demo[i]),tag=el.querySelector('.tag');tag.textContent=t;tag.className='tag '+c});
+  $('hearts').innerHTML='<span>♥</span>'.repeat(5);
+  $('wantDot').style.background=SAUCES[0].color;$('wantTxt').textContent='Ponzu, please!';
+})();
+</script>
+
+</body>
+</html>
